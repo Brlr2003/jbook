@@ -4,32 +4,46 @@ export const unpkgPathPlugin = () => {
   return {
     name: "unpkg-path-plugin",
     setup(build: esbuild.PluginBuild) {
+      // FINDING
       build.onResolve({ filter: /.*/ }, async (args: any) => {
         console.log("onResolve", args);
         if (args.path === "index.js")
           return { path: args.path, namespace: "a" };
-        else if (args.path === "tiny-test-pkg") {
+
+        if (args.path.includes("./") || args.path.includes("../")) {
           return {
-            path: "https://www.unpkg.com/tiny-test-pkg@1.0.0/index.js",
+            path: new URL(
+              args.path,
+              "https://unpkg.com" + args.resolveDir + "/"
+            ).href,
             namespace: "a",
           };
         }
+
+        return {
+          path: `https://www.unpkg.com/${args.path}`,
+          namespace: "a",
+        };
       });
+
+      // LOADING
       build.onLoad({ filter: /.*/ }, async (args: any) => {
         console.log("onLoad", args);
         if (args.path === "index.js") {
           return {
             loader: "jsx",
             contents: `
-              const message = require('tiny-test-pkg');
-              console.log(message);
+            import React, {useState} from 'react';
+            console.log(React, useState);
             `,
           };
         }
-        const { data } = await axios.get(args.path);
+        const { data, request } = await axios.get(args.path);
+
         return {
           loader: "jsx",
           contents: data,
+          resolveDir: new URL("./", request.responseURL).pathname,
         };
       });
     },
