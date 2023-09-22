@@ -6,26 +6,26 @@ const fileCache = localForage.createInstance({
   name: "filecache",
 });
 
-export const unpkgPathPlugin = () => {
+export const unpkgPathPlugin = (inputCode: string) => {
   return {
     name: "unpkg-path-plugin",
     setup(build: esbuild.PluginBuild) {
-      // FINDING
+      // Handle root entry file for index.js
+      build.onResolve({ filter: /(^index\.js$)/ }, () => {
+        return { path: "index.js", namespace: "a" };
+      });
+
+      // Handle relative paths in a module
+      build.onResolve({ filter: /^\.+\// }, (args: any) => {
+        return {
+          path: new URL(args.path, "https://unpkg.com" + args.resolveDir + "/")
+            .href,
+          namespace: "a",
+        };
+      });
+
+      // Handle main file of a module
       build.onResolve({ filter: /.*/ }, async (args: any) => {
-        console.log("onResolve", args);
-        if (args.path === "index.js")
-          return { path: args.path, namespace: "a" };
-
-        if (args.path.includes("./") || args.path.includes("../")) {
-          return {
-            path: new URL(
-              args.path,
-              "https://unpkg.com" + args.resolveDir + "/"
-            ).href,
-            namespace: "a",
-          };
-        }
-
         return {
           path: `https://www.unpkg.com/${args.path}`,
           namespace: "a",
@@ -39,10 +39,7 @@ export const unpkgPathPlugin = () => {
         if (args.path === "index.js") {
           return {
             loader: "jsx",
-            contents: `
-            import React, {useState} from 'react-select';
-            console.log(React, useState);
-            `,
+            contents: inputCode,
           };
         }
 

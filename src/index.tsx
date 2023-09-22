@@ -20,11 +20,12 @@ const App = () => {
 
   const onClick = async () => {
     if (!ref.current) return;
+
     const result = await ref.current.build({
       entryPoints: ["index.js"],
       bundle: true,
       write: false,
-      plugins: [unpkgPathPlugin()],
+      plugins: [unpkgPathPlugin(input)],
       define: {
         "process.env.NODE_ENV": '"production"',
         global: "window",
